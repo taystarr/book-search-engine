@@ -1,10 +1,10 @@
-const { User, Book } = require('../models');
+const { User } = require('../models');
 const { AuthenticationError } = require('apollo-server-express');
 const { signToken } = require('../utils/auth');
 
 const resolvers = {
     Query: {
-        me: async (parent, {username, email, _id }, context) => {
+        me: async (parent, args, context) => {
             if (context.user) {
                 const userData = await User.findOne({ _id: context.user._id }).select('-__v -password');
                 return userData;
@@ -39,30 +39,28 @@ const resolvers = {
             return { token, user };
         },
 
-        saveBook: async (parent, { userInput, newBook }) => {
-            try {
-                const updateUser = await User.findOneAndUpdate(
-                    { _id: userInput._id },
-                    { $push: { savedBooks: newBook }},
-                    { new: true, runValidators: true }
+        saveBook: async (parent, { newBook }, context) => {
+            if (context.user) {
+                const updateUser = await User.findByIdAndUpdate(
+                    { _id: context.user._id },
+                    { $push: { savedBooks: newBook } },
+                    { new: true }
                 );
                 return updateUser;
-            } catch (err) {
-                console.log(err);
-            }
+            } 
+            throw new AuthenticationError('You must log in first!');
         },
 
-        deleteBook: async (parent, { userInput, bookId }) => {
-            try {
-                const updateUser = await User.findOneAndUpdate(
-                    { _id: userInput._id },
-                    { $pull: { savedBooks: { bookdId: bookId } } },
-                    { new: true, runValidators: true }
+        deleteBook: async (parent, { bookId }, context) => {
+            if (context.user) {
+                const updateUser = await User.findByIdAndUpdate(
+                    { _id: context.user._id },
+                    { $pull: { savedBooks: { bookId } } },
+                    { new: true }
                 );
                 return updateUser;
-            } catch (err) {
-                console.log(err);
-            }
+            } 
+            throw new AuthenticationError('You must log in first!');
         }
     }
 };
